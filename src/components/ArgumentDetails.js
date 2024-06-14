@@ -1,5 +1,6 @@
-import React from 'react';
-import { Box, Typography } from '@mui/material';
+import React, { useState } from 'react';
+import { Box, Typography, Accordion, AccordionSummary, AccordionDetails } from '@mui/material';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { styled } from '@mui/material/styles';
 
 const Container = styled(Box)(({ bgcolor }) => ({
@@ -11,6 +12,7 @@ const Container = styled(Box)(({ bgcolor }) => ({
   color: 'white',
   borderRadius: '4px',
   boxSizing: 'border-box',
+  cursor: 'pointer',
 }));
 
 const ArgumentDetails = ({ response }) => {
@@ -41,38 +43,71 @@ const ArgumentDetails = ({ response }) => {
   const parsedResponse = response ? parseResponse(response) : {};
   const isArgument = normalizeStatus(parsedResponse['Argument Status'] || '') === 'this is an argument';
 
+  const [expandedSections, setExpandedSections] = useState({
+    Conclusion: true,
+    Premises: true,
+    Assumptions: true,
+    Validity: true,
+  });
+
+  const toggleSection = (section) => {
+    setExpandedSections((prev) => ({
+      ...prev,
+      [section]: !prev[section],
+    }));
+  };
+
   return (
     <Box sx={{ width: '100%', maxWidth: '600px', marginTop: '10px', boxSizing: 'border-box' }}>
       {isArgument ? (
         <>
-          <Container bgcolor="rgba(38, 75, 150, 1)"> {/* Light blue background */}
-            <Typography variant="h6" align="left">Conclusion</Typography>
-          </Container>
-          <Typography variant="body1" sx={{ marginTop: '10px', color: 'black', textAlign: 'left' }}>
-            {parsedResponse['Conclusion']}
-          </Typography>
-          <Container bgcolor="rgba(0, 111, 60, 1)"> {/* Light green background */}
-            <Typography variant="h6" align="left">Premises</Typography>
-          </Container>
-          {parsedResponse['Premises']?.split('\n').map((item, index) => (
-            <Typography key={index} variant="body1" sx={{ marginTop: '10px', color: 'black', textAlign: 'left' }}>
-              {item}
-            </Typography>
-          ))}
-          <Container bgcolor="rgba(191, 33, 47, 1)"> {/* Light red background */}
-            <Typography variant="h6" align="left">Assumptions</Typography>
-          </Container>
-          {parsedResponse['Assumptions']?.split('\n').map((item, index) => (
-            <Typography key={index} variant="body1" sx={{ marginTop: '10px', color: 'black', textAlign: 'left' }}>
-              {item}
-            </Typography>
-          ))}
-          <Container bgcolor="rgba(0, 0, 0, 0.8)">
-            <Typography variant="h6">Validity</Typography>
-          </Container>
-          <Typography variant="body1" sx={{ marginTop: '10px', color: 'black', textAlign: 'left' }}>
-            {parsedResponse['Validity']}
-          </Typography>
+          <Accordion expanded={expandedSections.Conclusion} onChange={() => toggleSection('Conclusion')}>
+            <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: 'white' }} />} sx={{ backgroundColor: 'rgba(38, 75, 150, 1)' }}>
+              <Typography variant="h6" sx={{ color: 'white' }}>Conclusion</Typography>
+            </AccordionSummary>
+            <AccordionDetails sx={{ padding: '10px', border: '2px solid rgba(38, 75, 150, 1)' }}>
+              <Typography variant="body1" sx={{ color: 'black', textAlign: 'left' }}>
+                {parsedResponse['Conclusion']}
+              </Typography>
+            </AccordionDetails>
+          </Accordion>
+
+          <Accordion expanded={expandedSections.Premises} onChange={() => toggleSection('Premises')}>
+            <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: 'white' }} />} sx={{ backgroundColor: 'rgba(0, 111, 60, 1)' }}>
+              <Typography variant="h6" sx={{ color: 'white' }}>Premises</Typography>
+            </AccordionSummary>
+            <AccordionDetails sx={{ padding: '10px', border: '2px solid rgba(0, 111, 60, 1)' }}>
+              {parsedResponse['Premises']?.split('\n').map((item, index) => (
+                <Typography key={index} variant="body1" sx={{ color: 'black', textAlign: 'left' }}>
+                  {item}
+                </Typography>
+              ))}
+            </AccordionDetails>
+          </Accordion>
+
+          <Accordion expanded={expandedSections.Assumptions} onChange={() => toggleSection('Assumptions')}>
+            <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: 'white' }} />} sx={{ backgroundColor: 'rgba(191, 33, 47, 1)' }}>
+              <Typography variant="h6" sx={{ color: 'white' }}>Assumptions</Typography>
+            </AccordionSummary>
+            <AccordionDetails sx={{ padding: '10px', border: '2px solid rgba(191, 33, 47, 1)' }}>
+              {parsedResponse['Assumptions']?.split('\n').map((item, index) => (
+                <Typography key={index} variant="body1" sx={{ color: 'black', textAlign: 'left' }}>
+                  {item}
+                </Typography>
+              ))}
+            </AccordionDetails>
+          </Accordion>
+
+          <Accordion expanded={expandedSections.Validity} onChange={() => toggleSection('Validity')}>
+            <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: 'white' }} />} sx={{ backgroundColor: 'rgba(0, 0, 0, 0.8)' }}>
+              <Typography variant="h6" sx={{ color: 'white' }}>Validity</Typography>
+            </AccordionSummary>
+            <AccordionDetails sx={{ padding: '10px', border: '2px solid rgba(0, 0, 0, 0.8)' }}>
+              <Typography variant="body1" sx={{ color: 'black', textAlign: 'left' }}>
+                {parsedResponse['Validity']}
+              </Typography>
+            </AccordionDetails>
+          </Accordion>
         </>
       ) : (
         <Typography variant="body1" sx={{ marginTop: '10px', color: 'black' }}>

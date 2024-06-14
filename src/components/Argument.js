@@ -60,13 +60,13 @@ const Argument = () => {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '20px' }}>
       <ArgumentInputCard onSubmit={handleSubmit} isSubmitting={loading} />
-      {loading && <CircularProgress />}
-      {submitted && error && (
+      {loading && <CircularProgress sx={{ marginTop: '20px' }} />}
+      {submitted && error && !loading && (
         <Typography variant="body1" sx={{ marginTop: '20px', color: 'red' }}>
           {error}
         </Typography>
       )}
-      {submitted && response && !error && <ArgumentDetails response={response} />}
+      {submitted && response && !error && !loading && <ArgumentDetails response={response} />}
     </Box>
   );
 };
