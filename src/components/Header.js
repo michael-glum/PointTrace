@@ -19,9 +19,9 @@ const Header = () => {
       position="static"
       sx={{
         boxShadow: 'none',
-        backgroundColor: 'white',
+        backgroundColor: '#242526',
         borderBottom: '1px solid #e0e0e0',
-        color: 'black'
+        color: 'white'
       }}>
       <Toolbar>
         <CenteredBox sx={{ transform: 'translateX(-32px)' /* Translate left by icon width and margin */ }}>

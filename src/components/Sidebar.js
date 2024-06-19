@@ -21,9 +21,37 @@ const SidebarItem = ({ type, label }) => {
 
 const Sidebar = () => {
   return (
-    <Box sx={{ width: '12vw', height: '100%', p: 2, borderRight: '1px solid #e0e0e0' }}>
-      <SidebarItem type="argumentInputNode" label="Argument Input Node" />
-      <SidebarItem type="anotherNodeType" label="Another Node Type" />
+    <Box
+      sx={{
+        width: 200,
+        bgcolor: '#FFFFFF',
+        height: '100%',
+        p: 2,
+        borderRight: '1px solid #e0e0e0',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        boxSizing: 'border-box'
+      }}>
+      <Typography variant="h6" align="center" sx={{ mb: 2 }}>Nodes</Typography>
+      <Box
+        sx={{
+          border: '1px solid #e0e0e0',
+          borderRadius: '8px',
+          p: 2,
+          width: '100%',
+          height: 'calc(100% - 64px)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          boxSizing: 'border-box',
+          overflow: 'hidden'
+        }}
+      >
+        <SidebarItem type="argumentInputNode" label="Argument Input" />
+        <SidebarItem type="anotherNodeType" label="Another Node" />
+      </Box>
     </Box>
   );
 };

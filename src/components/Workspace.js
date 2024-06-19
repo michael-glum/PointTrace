@@ -23,7 +23,7 @@ const Workspace = () => {
         const { x, y } = monitor.getClientOffset();
         const newNode = {
           id: `node-${nodes.length + 1}`,
-          type: 'argumentInputNode',
+          type: item.type,
           position: { x, y },
           data: { text: item.text, onSubmit: handleSubmit },
         };
@@ -45,15 +45,15 @@ const Workspace = () => {
     };
 
     return (
-      <Box sx={{ display: 'flex', height: '100%', width: '100%' }}>
+      <Box sx={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         <Sidebar />
         <Box
           ref={drop}
           sx={{
             flex: 1,
-            bgcolor: 'white',
-            height: '100%',
-            width: '100%',
+            bgcolor: '#F5F5F5',
+            overflow: 'hidden',
+            position: 'relative',
           }}
         >
           <ReactFlow
@@ -63,7 +63,7 @@ const Workspace = () => {
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
             nodeTypes={nodeTypes}
-            style={{ width: '100%', height: '100%' }} // Ensure React Flow container has width and height
+            style={{ width: '100%', height: '100%' }}
           >
             <Controls />
             <MiniMap />

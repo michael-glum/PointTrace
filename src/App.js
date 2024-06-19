@@ -10,9 +10,9 @@ import 'reactflow/dist/style.css';
 const App = () => {
   return (
     <DndProvider backend={HTML5Backend}>
-      <Box sx={{ height: '96.5vh', display: 'flex', flexDirection: 'column' }}>
+      <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         <Header />
-        <Box sx={{ height: '100vh', display: 'flex', width: '99vw' }}>
+        <Box sx={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
           <Workspace />
         </Box>
       </Box>
