@@ -1,5 +1,5 @@
 import React, { useCallback } from 'react';
-import ReactFlow, { addEdge, applyNodeChanges, applyEdgeChanges, MiniMap, Controls, Background } from 'reactflow';
+import ReactFlow, { addEdge, applyNodeChanges, applyEdgeChanges, MiniMap, Controls, Background, useReactFlow } from 'reactflow';
 import { useDrop } from 'react-dnd';
 import Sidebar from './Sidebar';
 import ArgumentInputNode from './ArgumentInputNode';
@@ -9,7 +9,18 @@ import { ItemTypes } from '../utils/constants';
 const initialNodes = [];
 const initialEdges = [];
 
+const nodeTypes = {
+  argumentInputNode: ArgumentInputNode,
+};
+
+const nodeSizeMap = {
+  ArgumentInputNode: { width: 600, height: 300 },
+};
+
+const getNodeSize = (type) => nodeSizeMap[type] || { width: 150, height: 100 };
+
 const Workspace = () => {
+    const { screenToFlowPosition } = useReactFlow();
     const [nodes, setNodes] = React.useState(initialNodes);
     const [edges, setEdges] = React.useState(initialEdges);
 
@@ -20,14 +31,26 @@ const Workspace = () => {
     const [{ isOver }, drop] = useDrop(() => ({
       accept: ItemTypes.NODE,
       drop: (item, monitor) => {
-        const { x, y } = monitor.getClientOffset();
-        const newNode = {
-          id: `node-${nodes.length + 1}`,
-          type: item.type,
-          position: { x, y },
-          data: { text: item.text, onSubmit: handleSubmit },
-        };
-        setNodes((nds) => nds.concat(newNode));
+        const clientOffset = monitor.getClientOffset();
+
+        const {width, height} = getNodeSize(item.type);
+
+        if (clientOffset) {
+          const {x, y} = clientOffset;
+
+          const canvasPoint = screenToFlowPosition({ x, y });
+
+          const newNode = {
+            id: `node-${new Date().getTime()}`, // Generate a unique ID
+            type: item.type,
+            position: {
+              x: canvasPoint.x - width / 2,
+              y: canvasPoint.y - height / 2
+            }, // Center the node on the cursor
+            data: { text: item.text, onSubmit: handleSubmit },
+          };
+          setNodes((nds) => nds.concat(newNode));
+        }
       },
       collect: (monitor) => ({
         isOver: !!monitor.isOver(),
@@ -37,11 +60,6 @@ const Workspace = () => {
     const handleSubmit = (text) => {
       console.log('Submitted argument:', text);
       // Add logic for handling the argument submission
-    };
-
-    const nodeTypes = {
-      argumentInputNode: ArgumentInputNode,
-      // Add more node types here
     };
 
     return (

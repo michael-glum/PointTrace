@@ -8,27 +8,30 @@ const StyledCard = styled(Card)({
   width: '100%',
   padding: '20px',
   boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
-  cursor: 'pointer',
 });
 
-const ArgumentInputNode = ({ data }) => {
+const ArgumentInputNode = React.memo(({ data }) => {
   const [inputValue, setInputValue] = useState(data.text || '');
   const [isValid, setIsValid] = useState(false);
-  const [isSubmitted, setIsSubmitted] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   const handleChange = useCallback((event) => {
+    event.stopPropagation();
     const value = event.target.value;
     setInputValue(value);
     setIsValid(value.trim().length > 0);
-    setIsSubmitted(false);
   }, []);
 
-  const handleSubmit = useCallback(() => {
+  const handleFocus = useCallback((event) => {
+    event.stopPropagation();
+  }, []);
+
+  const handleSubmit = useCallback((event) => {
+    event.stopPropagation();
     if (isValid) {
       data.onSubmit(inputValue);
-      setIsSubmitted(true);
       setIsCollapsed(true);
+      setIsValid(false);
     }
   }, [inputValue, isValid, data]);
 
@@ -57,16 +60,13 @@ const ArgumentInputNode = ({ data }) => {
               margin="normal"
               value={inputValue}
               onChange={handleChange}
+              onFocus={handleFocus}
               onClick={stopPropagation}
             />
             <Button
               variant="contained"
               fullWidth
-              onClick={(e) => {
-                stopPropagation(e);
-                handleSubmit();
-              }}
-              disabled={!isValid || data.isSubmitting || isSubmitted}
+              onClick={handleSubmit}
               sx={{
                 backgroundColor: isValid ? 'rgba(38, 75, 150, 1)' : 'rgba(38, 75, 150, 0.5)',
                 '&:hover': {
@@ -80,12 +80,12 @@ const ArgumentInputNode = ({ data }) => {
         )}
         {isCollapsed && (
           <Typography variant="body2" sx={{ marginTop: '10px' }}>
-            "{inputValue}"
+            {inputValue}
           </Typography>
         )}
       </CardContent>
     </StyledCard>
   );
-};
+});
 
 export default ArgumentInputNode;
