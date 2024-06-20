@@ -1,52 +1,42 @@
-import React, { useCallback } from 'react';
-import ReactFlow, { addEdge, applyNodeChanges, applyEdgeChanges, MiniMap, Controls, Background, useReactFlow } from 'reactflow';
+import React, { useCallback, useState } from 'react';
+import ReactFlow, { addEdge, applyNodeChanges, applyEdgeChanges, useNodesState, useEdgesState, MiniMap, Controls, Background, ReactFlowProvider } from 'reactflow';
 import { useDrop } from 'react-dnd';
 import Sidebar from './Sidebar';
-import ArgumentInputNode from './ArgumentInputNode';
 import { Box } from '@mui/material';
-import { ItemTypes } from '../utils/constants';
+import { ItemTypes, NodeTypes } from '../utils/constants';
+import { getNodeSize, getNodeId } from '../utils/nodeHelpers';
 
 const initialNodes = [];
 const initialEdges = [];
 
-const nodeTypes = {
-  argumentInputNode: ArgumentInputNode,
-};
-
-const nodeSizeMap = {
-  ArgumentInputNode: { width: 600, height: 300 },
-};
-
-const getNodeSize = (type) => nodeSizeMap[type] || { width: 150, height: 100 };
-
 const Workspace = () => {
-    const { screenToFlowPosition } = useReactFlow();
-    const [nodes, setNodes] = React.useState(initialNodes);
-    const [edges, setEdges] = React.useState(initialEdges);
+    const [reactFlowInstance, setReactFlowInstance] = useState(null);
+    const [nodes, setNodes] = useNodesState(initialNodes);
+    const [edges, setEdges] = useEdgesState(initialEdges);
 
-    const onNodesChange = useCallback((changes) => setNodes((nds) => applyNodeChanges(changes, nds)), []);
-    const onEdgesChange = useCallback((changes) => setEdges((eds) => applyEdgeChanges(changes, eds)), []);
-    const onConnect = useCallback((params) => setEdges((eds) => addEdge(params, eds)), []);
+    const onNodesChange = useCallback((changes) => setNodes((nds) => applyNodeChanges(changes, nds)), [setNodes]);
+    const onEdgesChange = useCallback((changes) => setEdges((eds) => applyEdgeChanges(changes, eds)), [setEdges]);
+    const onConnect = useCallback((params) => setEdges((eds) => addEdge(params, eds)), [setEdges]);
+
+    //const { isOver, drop } = useNodeDrop({ setNodes, reactFlowInstance, handleSubmit });
 
     const [{ isOver }, drop] = useDrop(() => ({
       accept: ItemTypes.NODE,
       drop: (item, monitor) => {
         const clientOffset = monitor.getClientOffset();
-
-        const {width, height} = getNodeSize(item.type);
-
-        if (clientOffset) {
+        if (clientOffset && reactFlowInstance) {
           const {x, y} = clientOffset;
+          const canvasPoint = reactFlowInstance.screenToFlowPosition({x, y});
 
-          const canvasPoint = screenToFlowPosition({ x, y });
+          const { width, height } = getNodeSize(item.type);
 
           const newNode = {
-            id: `node-${new Date().getTime()}`, // Generate a unique ID
+            id: getNodeId(),
             type: item.type,
             position: {
-              x: canvasPoint.x - width / 2,
-              y: canvasPoint.y - height / 2
-            }, // Center the node on the cursor
+            x: canvasPoint.x - width / 2,
+            y: canvasPoint.y - height / 2
+          },
             data: { text: item.text, onSubmit: handleSubmit },
           };
           setNodes((nds) => nds.concat(newNode));
@@ -55,7 +45,7 @@ const Workspace = () => {
       collect: (monitor) => ({
         isOver: !!monitor.isOver(),
       }),
-    }));
+    }), [setNodes, reactFlowInstance]);
 
     const handleSubmit = (text) => {
       console.log('Submitted argument:', text);
@@ -63,32 +53,35 @@ const Workspace = () => {
     };
 
     return (
-      <Box sx={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-        <Sidebar />
-        <Box
-          ref={drop}
-          sx={{
-            flex: 1,
-            bgcolor: '#F5F5F5',
-            overflow: 'hidden',
-            position: 'relative',
-          }}
-        >
-          <ReactFlow
-            nodes={nodes}
-            edges={edges}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-            onConnect={onConnect}
-            nodeTypes={nodeTypes}
-            style={{ width: '100%', height: '100%' }}
+      <ReactFlowProvider>
+        <Box sx={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+          <Sidebar />
+          <Box
+            ref={drop}
+            sx={{
+              flex: 1,
+              bgcolor: '#F5F5F5',
+              overflow: 'hidden',
+              position: 'relative',
+            }}
           >
-            <Controls />
-            <MiniMap />
-            <Background variant="dots" gap={12} size={1} />
-          </ReactFlow>
-        </Box>
+            <ReactFlow
+              nodes={nodes}
+              edges={edges}
+              onNodesChange={onNodesChange}
+              onEdgesChange={onEdgesChange}
+              onConnect={onConnect}
+              nodeTypes={NodeTypes}
+              onInit={setReactFlowInstance}
+              style={{ width: '100%', height: '100%' }}
+            >
+              <Controls />
+              <MiniMap />
+              <Background variant="dots" gap={12} size={1} />
+            </ReactFlow>
+          </Box>
       </Box>
+      </ReactFlowProvider>
     );
   };
   
