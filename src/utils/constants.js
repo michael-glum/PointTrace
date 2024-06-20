@@ -9,5 +9,5 @@ export const NodeTypes = {
   };
   
 export const NodeSizeMap = {
-    argumentInputNode: { width: 400, height: 300 },
+    argumentInputNode: { normal: { width: 400, height: 300 }, preview: { width: 150, height: 112.5 } },
 };

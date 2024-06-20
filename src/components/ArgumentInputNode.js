@@ -11,7 +11,7 @@ const StyledCard = styled(Card)({
 });
 
 const ArgumentInputNode = React.memo(({ data }) => {
-  const [inputValue, setInputValue] = useState(data.text || '');
+  const [inputValue, setInputValue] = useState(data?.text || '');
   const [isValid, setIsValid] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
 
@@ -46,7 +46,7 @@ const ArgumentInputNode = React.memo(({ data }) => {
   return (
     <StyledCard onClick={toggleCollapse}>
       <CardContent>
-        <Typography variant="h5" component="div" gutterBottom>
+        <Typography variant="h5" component="div" textAlign="center" gutterBottom>
           Argument Input
         </Typography>
         {!isCollapsed && (
