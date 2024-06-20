@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { Card, CardContent, Typography, TextField, Button } from '@mui/material';
 import { styled } from '@mui/material/styles';
+import { initiateArgument, initiateArgumentParams } from '../controllers/argumentInputNodeController';
 
 const StyledCard = styled(Card)({
   minWidth: '300px',
@@ -8,6 +9,7 @@ const StyledCard = styled(Card)({
   width: '100%',
   padding: '20px',
   boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
+  borderRadius: '8px',
 });
 
 const ArgumentInputNode = React.memo(({ data }) => {
@@ -29,7 +31,10 @@ const ArgumentInputNode = React.memo(({ data }) => {
   const handleSubmit = useCallback((event) => {
     event.stopPropagation();
     if (isValid) {
-      data.onSubmit(inputValue);
+      const params = initiateArgumentParams;
+      params.id ? params.id = data?.id : params.id = null;
+      params.input ? params.input = inputValue : params.id = null;
+      data.onSubmit(initiateArgument, params);
       setIsCollapsed(true);
       setIsValid(false);
     }
