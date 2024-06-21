@@ -1,72 +1,69 @@
 import React, { useCallback, useState } from 'react';
-import ReactFlow, { addEdge, applyNodeChanges, applyEdgeChanges, useNodesState, useEdgesState, MiniMap, Controls, Background, ReactFlowProvider } from 'reactflow';
+import { useSelector, useDispatch } from 'react-redux';
+import ReactFlow, { addEdge, applyNodeChanges, applyEdgeChanges, MiniMap, Controls, Background, ReactFlowProvider } from 'reactflow';
 import useNodeDrop from '../hooks/useNodeDrop';
 import Sidebar from './Sidebar';
 import { Box } from '@mui/material';
-import { NodeTypes, InitialInstructions } from '../utils/constants';
-
-const initialNodes = [];
-const initialEdges = [];
+import { NodeTypes } from '../utils/constants';
+import { updateNode } from '../slices/nodeSlice';
+import { addEdge as addEdgeAction } from '../slices/edgeSlice';
 
 const Workspace = () => {
-    const [reactFlowInstance, setReactFlowInstance] = useState(null);
-    const [nodes, setNodes] = useNodesState(initialNodes);
-    const [edges, setEdges] = useEdgesState(initialEdges);
-    const [conversationHistory, setConversationHistory] = useState([
-      { role: 'system', content: InitialInstructions }
-    ]);
+  const dispatch = useDispatch();
+  const nodes = useSelector(state => state.nodes);
+  const edges = useSelector(state => state.edges);
 
-    const onNodesChange = useCallback((changes) => setNodes((nds) => applyNodeChanges(changes, nds)), [setNodes]);
-    const onEdgesChange = useCallback((changes) => setEdges((eds) => applyEdgeChanges(changes, eds)), [setEdges]);
-    const onConnect = useCallback((params) => setEdges((eds) => addEdge(params, eds)), [setEdges]);
 
-    const handleSubmit = useCallback((action, params) => {
-      const data = {
-        id: params.id,
-        input: params.input,
-        nodes: params.nodes ? nodes : undefined,
-        edges: params.edges ? edges : undefined,
-        conversationHistory: params.conversationHistory ? conversationHistory : undefined,
-        setNodes: params.setNodes ? setNodes: undefined,
-        setEdges: params.setEdges ? setEdges : undefined,
-        setConversationHistory: params.setConversationHistory ? setConversationHistory: undefined,
-      };
-      action(data);
-    }, [nodes, edges, conversationHistory, setNodes, setEdges, setConversationHistory]);
+  const [reactFlowInstance, setReactFlowInstance] = useState(null);
 
-    const {isOver, drop} = useNodeDrop({ setNodes, reactFlowInstance, handleSubmit });
+  const onNodesChange = useCallback(
+    (changes) => dispatch(updateNode(applyNodeChanges(changes, nodes))),
+    [nodes, dispatch]
+  );
 
-    return (
-      <ReactFlowProvider>
-        <Box sx={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-          <Sidebar />
-          <Box
-            ref={drop}
-            sx={{
-              flex: 1,
-              bgcolor: '#F5F5F5',
-              overflow: 'hidden',
-              position: 'relative',
-            }}
+  const onEdgesChange = useCallback(
+    (changes) => dispatch(addEdgeAction(applyEdgeChanges(changes, edges))),
+    [edges, dispatch]
+  );
+
+  const onConnect = useCallback(
+    (params) => dispatch(addEdgeAction(addEdge(params, edges))),
+    [edges, dispatch]
+  );
+    
+  const { isOver, drop } = useNodeDrop(reactFlowInstance);
+
+  return (
+    <ReactFlowProvider>
+      <Box sx={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+        <Sidebar />
+        <Box
+          ref={drop}
+          sx={{
+            flex: 1,
+            bgcolor: '#F5F5F5',
+            overflow: 'hidden',
+            position: 'relative',
+          }}
+        >
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onConnect={onConnect}
+            nodeTypes={NodeTypes}
+            onInit={setReactFlowInstance}
+            style={{ width: '100%', height: '100%' }}
           >
-            <ReactFlow
-              nodes={nodes}
-              edges={edges}
-              onNodesChange={onNodesChange}
-              onEdgesChange={onEdgesChange}
-              onConnect={onConnect}
-              nodeTypes={NodeTypes}
-              onInit={setReactFlowInstance}
-              style={{ width: '100%', height: '100%' }}
-            >
-              <Controls />
-              <MiniMap />
-              <Background variant="dots" gap={12} size={1} />
-            </ReactFlow>
-          </Box>
+            <Controls />
+            <MiniMap />
+            <Background variant="dots" gap={12} size={1} />
+          </ReactFlow>
+        </Box>
       </Box>
-      </ReactFlowProvider>
-    );
-  };
+    </ReactFlowProvider>
+  );
+};
   
-  export default Workspace;
+export default Workspace;

@@ -1,7 +1,9 @@
 import React, { useState, useCallback } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import { Card, CardContent, Typography, TextField, Button } from '@mui/material';
 import { styled } from '@mui/material/styles';
-import { initiateArgument, initiateArgumentParams } from '../controllers/argumentInputNodeController';
+import { initiateArgument } from '../slices/argumentSlice';
+import { throttle } from 'lodash';
 
 const StyledCard = styled(Card)({
   minWidth: '300px',
@@ -12,10 +14,13 @@ const StyledCard = styled(Card)({
   borderRadius: '8px',
 });
 
-const ArgumentInputNode = React.memo(({ data }) => {
+const ArgumentInputNode = ({ id, data }) => {
   const [inputValue, setInputValue] = useState(data?.text || '');
   const [isValid, setIsValid] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  
+  const { loading, error, response } = useSelector(state => state.argument);
+  const dispatch = useDispatch();
 
   const handleChange = useCallback((event) => {
     event.stopPropagation();
@@ -28,17 +33,21 @@ const ArgumentInputNode = React.memo(({ data }) => {
     event.stopPropagation();
   }, []);
 
+  const throttledDispatch = useCallback(
+    throttle((inputValue) => {
+      dispatch(initiateArgument(inputValue));
+    }, 2000),
+    [dispatch]
+  );
+
   const handleSubmit = useCallback((event) => {
     event.stopPropagation();
     if (isValid) {
-      const params = initiateArgumentParams;
-      params.id ? params.id = data?.id : params.id = null;
-      params.input ? params.input = inputValue : params.id = null;
-      data.onSubmit(initiateArgument, params);
+      throttledDispatch(inputValue);
       setIsCollapsed(true);
       setIsValid(false);
     }
-  }, [inputValue, isValid, data]);
+  }, [inputValue, isValid, throttledDispatch]);
 
   const toggleCollapse = useCallback(() => {
     setIsCollapsed((prev) => !prev);
@@ -79,8 +88,9 @@ const ArgumentInputNode = React.memo(({ data }) => {
                 },
               }}
             >
-              Submit
+              {loading ? 'Analyzing...' : 'Submit'}
             </Button>
+            {error && <Typography variant="body2" color="error">{error}</Typography>}
           </>
         )}
         {isCollapsed && (
@@ -88,9 +98,14 @@ const ArgumentInputNode = React.memo(({ data }) => {
             {inputValue}
           </Typography>
         )}
+        {response && (
+          <Typography variant="body2" sx={{ marginTop: '10px' }}>
+            {response}
+          </Typography>
+        )}
       </CardContent>
     </StyledCard>
   );
-});
+};
 
 export default ArgumentInputNode;
