@@ -33,12 +33,9 @@ const ArgumentInputNode = ({ id, data }) => {
     event.stopPropagation();
   }, []);
 
-  const throttledDispatch = useCallback(
-    throttle((inputValue) => {
-      dispatch(initiateArgument(inputValue));
-    }, 2000),
-    [dispatch]
-  );
+  const throttledDispatch = throttle((value) => {
+      dispatch(initiateArgument(value));
+    }, 2000);
 
   const handleSubmit = useCallback((event) => {
     event.stopPropagation();
