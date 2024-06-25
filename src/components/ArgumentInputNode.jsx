@@ -14,7 +14,7 @@ const StyledCard = styled(Card)({
   borderRadius: '8px',
 });
 
-const ArgumentInputNode = ({ id, data }) => {
+const ArgumentInputNode = ({ data }) => {
   const [inputValue, setInputValue] = useState(data?.text || '');
   const [isValid, setIsValid] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -34,7 +34,9 @@ const ArgumentInputNode = ({ id, data }) => {
   }, []);
 
   const throttledDispatch = throttle((value) => {
-      dispatch(initiateArgument(value));
+      const nodeId = data.nodeId;
+      console.log("id", nodeId);
+      dispatch(initiateArgument({ input: value, nodeId }));
     }, 2000);
 
   const handleSubmit = useCallback((event) => {

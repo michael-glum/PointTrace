@@ -3,6 +3,9 @@ import { useDispatch } from 'react-redux';
 import { ItemTypes } from '../utils/constants';
 import { getNodeSize, getNodeId } from '../utils/helpers';
 import { addNode } from '../slices/nodeSlice';
+import { InitialInstructions } from '../utils/promptUtils';
+import { setConversationHistory } from '../slices/argumentSlice';
+
 
 const useNodeDrop = (reactFlowInstance) => {
   const dispatch = useDispatch();
@@ -25,10 +28,11 @@ const useNodeDrop = (reactFlowInstance) => {
             x: canvasPoint.x - width / 2,
             y: canvasPoint.y - height / 2,
           },
-          data: { id, text: item.text },
+          data: { nodeId: id, text: item.text },
         };
-
+        
         dispatch(addNode(newNode));
+        dispatch(setConversationHistory({ nodeId: id, conversationHistory: [{ role: 'system', content: InitialInstructions }] }));
       }
     },
     collect: (monitor) => ({
