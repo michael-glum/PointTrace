@@ -1,8 +1,9 @@
 export const makeInputPrompt = (inputValue) => {
-    return `Analyze the following text and determine if it contains an argument.
-        If it does, break it down into Conclusion, Premises, and Assumptions in their simplest forms.
+    return `Analyze the following text and determine if it contains one or more arguments.
+        If it does, break each argument down into Conclusion, Premises, and Assumptions in their simplest forms.
         Ensure you include both explicit and implicit assumptions, noting the premise each assumption is derived from.
-        Additionally, evaluate the validity of the argument.
+        Additionally, evaluate the logical validity / soundness of each argument.
+        Opinions are considered arguments, but they are invalid.
         If the text does not contain an argument, clearly state that it is not an argument.
         If there are multiple sides being argued, compare the different arguments.
         Determine if the arguments are equivalent and identify the true points of contention within the argument, such as misalignment of their premises or assumptions.
@@ -10,74 +11,49 @@ export const makeInputPrompt = (inputValue) => {
         Text: "${inputValue}"
         Response Format:
 
-        •	Conclusion: [state the conclusion]
-        •	Premises: [list the premises]
-        •	Explicit Assumptions: [list the explicit assumptions and the premise each assumption is derived from]
-        •	Implicit Assumptions: [list the implicit assumptions, considering all underlying ideas or conditions that must be true for the argument to hold, and the premise each assumption is derived from]
-        •	Validity: [state if the argument is valid based solely on the premises and why]
-        •	Argument Status: [state “This is an argument” or “This is not an argument”]
+        Argument [n]:
+        Conclusion: [state the conclusion]
+        Premises:
+        - [premise 1]
+        - [premise 2]
+        - ...
+        Explicit Assumptions:
+        - [explicit assumption 1] (Premise #)
+        - [explicit assumption 2] (Premise #)
+        - ...
+        Implicit Assumptions:
+        - [implicit assumption 1] (Premise #)
+        - [implicit assumption 2] (Premise #)
+        - ...
+        Validity: [state if the argument is valid based solely on the premises and why]
+        Argument Status: [state “This is an argument” or “This is not an argument”]
 
-        If there are multiple sides:
+        If there are multiple sides, use the same format for each argument.
 
-        •	Argument 1:
-        •	Conclusion: [state the conclusion]
-        •	Premises: [list the premises]
-        •	Explicit Assumptions: [list the explicit assumptions and the premise each assumption is derived from]
-        •	Implicit Assumptions: [list the implicit assumptions, considering all underlying ideas or conditions that must be true for the argument to hold, and the premise each assumption is derived from]
-        •	Validity: [state if the argument is valid based solely on the premises and why]
-        •	Argument 2:
-        •	Conclusion: [state the conclusion]
-        •	Premises: [list the premises]
-        •	Explicit Assumptions: [list the explicit assumptions and the premise each assumption is derived from]
-        •	Implicit Assumptions: [list the implicit assumptions, considering all underlying ideas or conditions that must be true for the argument to hold, and the premise each assumption is derived from]
-        •	Validity: [state if the argument is valid based solely on the premises and why]
-        •	Equivalence: [determine if the arguments are equivalent and explain why or why not]
-        •	Points of Contention: [identify the true points of contention within the arguments, such as misalignment of their premises or assumptions]
+        Example Text:
+
+        "Public transportation should be free for all because it reduces traffic congestion and provides equal access to mobility. Also, increased use of public transportation would reduce pollution."
 
         Example Response:
 
-        •	Conclusion: [Example conclusion]
-        •	Premises:
-        1.	[Example premise]
-        2.	[Example premise]
-        •	Explicit Assumptions:
-        1.	[Example explicit assumption] (Premise #)
-        2.	[Example explicit assumption] (Premise #)
-        •	Implicit Assumptions:
-        1.	[Example implicit assumption] (Premise #)
-        2.	[Example implicit assumption] (Premise #)
-        •	Validity: [Example validity analysis based on premises]
-        •	Argument Status: [Example argument status]
-
-        If there are multiple sides:
-
-        •	Argument 1:
-        •	Conclusion: [Example conclusion]
-        •	Premises:
-        1.	[Example premise]
-        2.	[Example premise]
-        •	Explicit Assumptions:
-        1.	[Example explicit assumption] (Premise #)
-        2.	[Example explicit assumption] (Premise #)
-        •	Implicit Assumptions:
-        1.	[Example implicit assumption] (Premise #)
-        2.	[Example implicit assumption] (Premise #)
-        •	Validity: [Example validity analysis based on premises]
-        •	Argument 2:
-        •	Conclusion: [Example conclusion]
-        •	Premises:
-        1.	[Example premise]
-        2.	[Example premise]
-        •	Explicit Assumptions:
-        1.	[Example explicit assumption] (Premise #)
-        2.	[Example explicit assumption] (Premise #)
-        •	Implicit Assumptions:
-        1.	[Example implicit assumption] (Premise #)
-        2.	[Example implicit assumption] (Premise #)
-        •	Validity: [Example validity analysis based on premises]
-        •	Equivalence: [Example equivalence analysis]
-        •	Points of Contention: [Example points of contention analysis]
+        Argument 1:
+        Conclusion: Public transportation should be free for all.
+        Premises:
+        - Public transportation reduces traffic congestion.
+        - Free public transportation promotes equal access to mobility.
+        - Increased use of public transport reduces environmental pollution.
+        Explicit Assumptions:
+        - Reduced traffic congestion benefits society. (Premise #1)
+        - Equal access to mobility is a societal good. (Premise #2)
+        - Reduced pollution has a positive environmental impact. (Premise #3)
+        Implicit Assumptions:
+        - People will use public transportation more if it is free. (Premise #1)
+        - The cost of free public transport can be covered by other means. (Premise #2)
+        - Increased public transportation use leads to a decrease in personal vehicle use. (Premise #3)
+        - There is no alternative solution that would be more efficient and/or effective at reducing environmental pollution and should take priority over free public transport. (Premise #3)
+        Validity: The argument is invalid because even if each premise is proven to be true, the conclusion can still be false if the implicit assumptions are false. For example, even if all of the premises about the benefits of providing free public transport are true, there could still be another option that is better at providing those same benefits. Therefore, there could be a tradeoff scenario in which only one of the two options can be chosen and the decision has to be made to not make public transportation free, in favor of a better solution. It follows then, in that scenario, that public transportation should not be free for all.
+        Argument Status: This is an argument.
     `;
 };
 
-export const InitialInstructions = 'You are an assistant that analyzes arguments and breaks them down into Conclusion, Premises, and Assumptions. Additionally, evaluate the validity of the argument based solely on the premises.';
+export const InitialInstructions = 'You are an assistant that analyzes arguments and breaks them down into Conclusion, Premises, and Assumptions. Additionally, evaluate the logical validity of the argument. An argument is valid if, if all of its premises (not assumptions) are true, it always has to be true. Opinions are considered arguments.';

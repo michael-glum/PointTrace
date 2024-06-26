@@ -11,31 +11,24 @@ export const initiateArgument = createAsyncThunk(
   async ({ input, nodeId }, { dispatch, getState }) => {
     console.log("initiateArgument");
     const state = getState();
-    console.log("here-1");
     const nodeState = state.argument.nodes[nodeId];
-    console.log("here-2");
-    console.log("nodeId", nodeState);
+    console.log("nodeState", nodeState);
     const conversationHistory = nodeState ? nodeState.conversationHistory : [];
-    console.log("here-3")
 
     dispatch(setLoading({ nodeId, loading: true}));
     dispatch(setError(''));
 
     try {
       const newMessage = { role: 'user', content: makeInputPrompt(input) };
-      console.log("here");
       const updatedHistory = [...conversationHistory, newMessage];
-      console.log("here1");
       const gptResponse = await fetchGPTResponse(updatedHistory);
-      console.log("here2");
       const responseContent = gptResponse.choices[0]?.message?.content || 'No response received.';
       console.log("responseContent", responseContent);
 
       const parsedArguments = parseArgumentResponse(responseContent);
+      console.log("parsedArguments", parsedArguments);
       
       const updatedHistoryWithResponse = [...updatedHistory, { role: 'system', content: responseContent }];
-
-      console.log("here3");
 
       const allNodes = [];
       const allEdges = [];
@@ -72,29 +65,41 @@ export const initiateArgument = createAsyncThunk(
           id: getEdgeId(),
           source: nodeId,
           target: conclusionNodeId,
+          targetHandle: 'target-handle-top',
         });
 
         // Connect premises to conclusion
         premiseNodes.forEach(premiseNode => {
           allEdges.push({
             id: getEdgeId(),
-            source: conclusionNodeId,
-            target: premiseNode.id,
+            source: premiseNode.id,
+            target: conclusionNodeId,
+            sourceHandle: 'source-handle-top',
+            targetHandle: 'target-handle-bottom',
           });
         });
 
         assumptionNodes.forEach(assumptionNode => {
-          const premiseNodeId = premiseNodes[assumptionNode.data.premiseIndex].id;
-          allEdges.push({
-            id: getEdgeId(),
-            source: premiseNodeId,
-            target: assumptionNode.id,
-          });
+          const premiseNodeId = premiseNodes[assumptionNode.data.premiseIndex]?.id;
+          if (premiseNodeId) {
+            allEdges.push({
+              id: getEdgeId(),
+              source: premiseNodeId,
+              target: assumptionNode.id,
+              sourceHandle: 'source-handle-bottom',
+              targetHandle: 'target-handle-top',
+            });
+          }
         });
       });
 
+      console.log("allNodes", allNodes);
+      console.log("allEdges", allEdges);
+
       allNodes.forEach(node => dispatch(addNode(node)));
-      allEdges.forEach(edge => dispatch(addEdge(edge)));
+      setTimeout(() => { // Adding a slight delay to ensure nodes are created before edges
+        allEdges.forEach(edge => dispatch(addEdge(edge)));
+      }, 100);
 
       dispatch(setResponse({ nodeId, response: responseContent }));
       dispatch(setConversationHistory({ nodeId, conversationHistory: updatedHistoryWithResponse }));

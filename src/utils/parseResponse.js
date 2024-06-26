@@ -1,72 +1,71 @@
 export const parseArgumentResponse = (responseContent) => {
-  // Split the response content into lines
   const lines = responseContent.split('\n').map(line => line.trim()).filter(line => line);
 
-  // Initialize variables to store different parts of the argument
   let currentArgument = null;
-  const myArguments = [];
+  const parsedArguments = [];
+  let currentSection = '';
+
+  const SECTION_KEYS = {
+    CONCLUSION: 'Conclusion:',
+    PREMISES: 'Premises:',
+    EXPLICIT_ASSUMPTIONS: 'Explicit Assumptions:',
+    IMPLICIT_ASSUMPTIONS: 'Implicit Assumptions:',
+    VALIDITY: 'Validity:',
+    ARGUMENT_STATUS: 'Argument Status:',
+  };
 
   // Helper function to add a new argument
   const addNewArgument = () => {
-      if (currentArgument) {
-          myArguments.push(currentArgument);
-      }
-      currentArgument = {
-          conclusion: '',
-          premises: [],
-          explicitAssumptions: [],
-          implicitAssumptions: [],
-          validity: '',
-          argumentStatus: ''
-      };
+    if (currentArgument && currentArgument.conclusion) {
+      parsedArguments.push(currentArgument);
+    }
+    currentArgument = {
+      conclusion: '',
+      premises: [],
+      explicitAssumptions: [],
+      implicitAssumptions: [],
+      validity: '',
+      argumentStatus: ''
+    };
+    currentSection = '';
   };
 
-  // Ensure an argument is always initialized
-  addNewArgument();
+  // Regular expression to match "Argument X:"
+  const argumentHeaderRegex = /^Argument \d+:/;
 
   // Iterate over the lines to extract information
   lines.forEach(line => {
-      if (line.startsWith('• Conclusion:')) {
-          if (currentArgument) addNewArgument();
-          currentArgument.conclusion = line.replace('• Conclusion:', '').trim();
-      } else if (line.startsWith('• Premises:')) {
-          // Premises section starts
-      } else if (line.startsWith('• Explicit Assumptions:')) {
-          // Explicit Assumptions section starts
-      } else if (line.startsWith('• Implicit Assumptions:')) {
-          // Implicit Assumptions section starts
-      } else if (line.startsWith('• Validity:')) {
-          currentArgument.validity = line.replace('• Validity:', '').trim();
-      } else if (line.startsWith('• Argument Status:')) {
-          currentArgument.argumentStatus = line.replace('• Argument Status:', '').trim();
-      } else if (line.match(/^\d+\.\s/)) {
-          // Handle numbered lines for premises and assumptions
-          const premiseMatch = line.match(/^\d+\.\s*(.*)$/);
-          if (premiseMatch) {
-              currentArgument.premises.push(premiseMatch[1].trim());
-          } else {
-              const explicitAssumptionMatch = line.match(/^(.*)\s*\(Premise #(\d+)\)$/);
-              if (explicitAssumptionMatch) {
-                  currentArgument.explicitAssumptions.push({
-                      text: explicitAssumptionMatch[1].trim(),
-                      premiseIndex: parseInt(explicitAssumptionMatch[2]) - 1,
-                  });
-              } else {
-                  const implicitAssumptionMatch = line.match(/^(.*)\s*\(Derived from Premise #(\d+)\)$/);
-                  if (implicitAssumptionMatch) {
-                      currentArgument.implicitAssumptions.push({
-                          text: implicitAssumptionMatch[1].trim(),
-                          premiseIndex: parseInt(implicitAssumptionMatch[2]) - 1,
-                      });
-                  }
-              }
-          }
+    if (argumentHeaderRegex.test(line)) {
+      addNewArgument(); // Ensure the current argument is saved before starting a new one
+    } else if (line.startsWith(SECTION_KEYS.CONCLUSION)) {
+      currentSection = 'conclusion';
+      currentArgument.conclusion = line.replace(SECTION_KEYS.CONCLUSION, '').trim();
+    } else if (line.startsWith(SECTION_KEYS.PREMISES)) {
+      currentSection = 'premises';
+    } else if (line.startsWith(SECTION_KEYS.EXPLICIT_ASSUMPTIONS)) {
+      currentSection = 'explicitAssumptions';
+    } else if (line.startsWith(SECTION_KEYS.IMPLICIT_ASSUMPTIONS)) {
+      currentSection = 'implicitAssumptions';
+    } else if (line.startsWith(SECTION_KEYS.VALIDITY)) {
+      currentSection = 'validity';
+      currentArgument.validity = line.replace(SECTION_KEYS.VALIDITY, '').trim();
+    } else if (line.startsWith(SECTION_KEYS.ARGUMENT_STATUS)) {
+      currentSection = 'argumentStatus';
+      currentArgument.argumentStatus = line.replace(SECTION_KEYS.ARGUMENT_STATUS, '').trim();
+    } else if (line.startsWith('- ')) {
+      const content = line.replace('- ', '').trim();
+      if (currentSection === 'premises') {
+        currentArgument.premises.push(content);
+      } else if (currentSection === 'explicitAssumptions') {
+        currentArgument.explicitAssumptions.push({ text: content, premiseIndex: currentArgument.premises.length - 1 });
+      } else if (currentSection === 'implicitAssumptions') {
+        currentArgument.implicitAssumptions.push({ text: content, premiseIndex: currentArgument.premises.length - 1 });
       }
+    }
   });
 
-  if (currentArgument.conclusion) {
-    myArguments.push(currentArgument);
-}
+  // Add the last argument if it has a conclusion
+  addNewArgument();
 
-return myArguments;
+  return parsedArguments;
 };

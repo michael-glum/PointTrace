@@ -1,9 +1,10 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Card, CardContent, Typography, TextField, Button } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { initiateArgument } from '../slices/argumentSlice';
 import { throttle } from 'lodash';
+import { Handle } from 'reactflow';
 
 const StyledCard = styled(Card)({
   minWidth: '300px',
@@ -18,8 +19,12 @@ const ArgumentInputNode = ({ data }) => {
   const [inputValue, setInputValue] = useState(data?.text || '');
   const [isValid, setIsValid] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
-  const { loading, error, response } = useSelector(state => state.argument);
+  const nodeId = data?.nodeId;
+  const nodeState = useSelector(state => state.argument.nodes[nodeId] || { loading: false, error: false, response: ''});
+  const { loading, error, response } = nodeState;
+
   const dispatch = useDispatch();
 
   const handleChange = useCallback((event) => {
@@ -34,8 +39,6 @@ const ArgumentInputNode = ({ data }) => {
   }, []);
 
   const throttledDispatch = throttle((value) => {
-      const nodeId = data.nodeId;
-      console.log("id", nodeId);
       dispatch(initiateArgument({ input: value, nodeId }));
     }, 2000);
 
@@ -43,10 +46,18 @@ const ArgumentInputNode = ({ data }) => {
     event.stopPropagation();
     if (isValid) {
       throttledDispatch(inputValue);
-      setIsCollapsed(true);
+      setIsSubmitting(true);
       setIsValid(false);
     }
   }, [inputValue, isValid, throttledDispatch]);
+
+  useEffect(() => {
+    console.log("loading:", loading);
+    if (!loading && isSubmitting) {
+      setIsCollapsed(true);
+      setIsSubmitting(false);
+    }
+  }, [loading, isSubmitting]);
 
   const toggleCollapse = useCallback(() => {
     setIsCollapsed((prev) => !prev);
@@ -58,6 +69,7 @@ const ArgumentInputNode = ({ data }) => {
 
   return (
     <StyledCard onClick={toggleCollapse}>
+      <Handle type="source" position="bottom" />
       <CardContent>
         <Typography variant="h5" component="div" textAlign="center" gutterBottom>
           Argument Input

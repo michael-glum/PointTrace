@@ -36,21 +36,23 @@ const NodeWrapper = ({ nodetype, children }) => (
 
 export const ConclusionNode = ({ data }) => (
   <NodeWrapper nodetype="conclusion">
-    <Handle type="source" position="bottom" />
+    <Handle type="target" id="target-handle-top" position="top" />
+    <Handle type="target" id="target-handle-bottom" position="bottom" />
     <Typography variant="body2">{data.label}</Typography>
   </NodeWrapper>
 );
 
 export const PremiseNode = ({ data }) => (
   <NodeWrapper nodetype="premise">
-    <Handle type="target" position="top" />
+    <Handle type="source" id="source-handle-top" position="top" />
+    <Handle type="source" id="source-handle-bottom" position="bottom" />
     <Typography variant="body2">{data.label}</Typography>
   </NodeWrapper>
 );
 
 export const AssumptionNode = ({ data }) => (
   <NodeWrapper nodetype="assumption">
-    <Handle type="target" position="top" />
+    <Handle type="target" id="target-handle-top" position="top" />
     <Typography variant="body2">{data.label}</Typography>
   </NodeWrapper>
 );
