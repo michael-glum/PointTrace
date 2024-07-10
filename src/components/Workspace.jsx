@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import ReactFlow, {
   MiniMap,
@@ -18,7 +18,6 @@ import { Box } from '@mui/material';
 import { NodeTypes } from '../utils/constants';
 import { setNodes as setNodesAction, updateNode as updateNodeAction } from '../slices/nodeSlice';
 import { setEdges as setEdgesAction, addEdge as addEdgeAction } from '../slices/edgeSlice';
-import getLayoutedElements from '../utils/layoutHelper';
 
 const Workspace = () => {
   const dispatch = useDispatch();
@@ -97,11 +96,48 @@ const Workspace = () => {
     [setEdges, dispatch]
   );
 
+  const getChildNodes = useCallback((nodeId) => {
+    return edges
+      .filter(edge => edge.source === nodeId)
+      .map(edge => nodes.find(node => node.id === edge.target));
+  }, [edges, nodes]);
+
+  const updateNodeAndChildren = useCallback((nodeId, dx, dy, visited = new Set()) => {
+    if (visited.has(nodeId)) return;
+    visited.add(nodeId);
+
+    setNodes((prevNodes) => 
+      prevNodes.map((node) => {
+        if (node.id === nodeId) {
+          const newNode = {
+            ...node,
+            position: {
+              x: node.position.x + dx,
+              y: node.position.y + dy,
+            },
+          };
+          return newNode;
+        }
+        return node;
+      })
+    );
+
+    const childNodes = getChildNodes(nodeId);
+    childNodes.forEach((childNode) => {
+      if (childNode) {
+        updateNodeAndChildren(childNode.id, dx, dy, visited);
+      }
+    });
+  }, [getChildNodes]);
+
   const onNodeDragStop = useCallback(
     (event, node) => {
-      dispatch(updateNodeAction(node));
+      const dx = node.position.x - node.positionAbsolute.x;
+      const dy = node.position.y - node.positionAbsolute.y;
+      updateNodeAndChildren(node.id, dx, dy);
+      debouncedUpdateNodes(nodes); // Debounce the update to Redux here
     },
-    [dispatch]
+    [updateNodeAndChildren, debouncedUpdateNodes, nodes]
   );
 
   const onSave = useCallback(() => {
@@ -111,13 +147,6 @@ const Workspace = () => {
       dispatch(setEdgesAction(flow.edges));
     }
   }, [reactFlowInstance, dispatch]);
-
-  // Apply the layout whenever nodes or edges change
-  useEffect(() => {
-    const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(nodes, edges);
-    setNodes([...layoutedNodes]);
-    setEdges([...layoutedEdges]);
-  }, [nodes, edges]);
 
   return (
     <ReactFlowProvider>

@@ -3,9 +3,9 @@ import { fetchGPTResponse } from '../services/openai';
 import { makeInputPrompt } from '../utils/promptUtils';
 import { addNode } from './nodeSlice';
 import { addEdge } from './edgeSlice';
-import { getNodeId, getEdgeId, calculateSubtreeWidth, calculateTotalTreeWidth, positionNodesHorizontally } from '../utils/helpers';
+import { getNodeId, getEdgeId } from '../utils/helpers';
 import { parseArgumentResponse } from '../utils/parseResponse';
-import { NODE_MAX_WIDTH, NODE_MAX_HEIGHT, NODE_SPACING, LAYER_SPACING } from '../utils/constants';
+import getLayoutedElements from '../utils/layout';
 
 export const initiateArgument = createAsyncThunk(
   'argument/initiateArgument',
@@ -37,79 +37,32 @@ export const initiateArgument = createAsyncThunk(
       const allNodes = [];
       const allEdges = [];
 
-      // Convert arguments to a nested structure
-      const convertToNestedStructure = (arg) => {
-        const premises = arg.premises.map((premise, premiseIndex) => ({
-          label: premise,
-          type: 'premise',
-          premiseIndex,
-          children: arg.explicitAssumptions.concat(arg.implicitAssumptions)
-            .filter(assumption => assumption.premiseIndex === premiseIndex)
-            .map(assumption => ({
-              label: assumption.text,
-              type: 'assumption',
-              children: [] // Add future layers here
-            }))
-        }));
-
-        return {
-          label: arg.conclusion,
-          type: 'conclusion',
-          children: premises
-        };
-      };
-
-      // Calculate the width of each argument subtree
-      const subtreeWidths = parsedArguments.map(arg => {
-        const nestedArg = convertToNestedStructure(arg);
-        return calculateSubtreeWidth([nestedArg], NODE_MAX_WIDTH, NODE_SPACING);
-      });
-
-      // Calculate the total width of the entire tree
-      const totalTreeWidth = calculateTotalTreeWidth(subtreeWidths, NODE_SPACING);
-
-      // Calculate the horizontal position for each argument subtree
-      parsedArguments.forEach((arg, argIndex) => {
-        const argOffset = positionNodesHorizontally(totalTreeWidth, NODE_MAX_WIDTH, NODE_SPACING, argIndex);
-        const argX = argumentInputNodePosition.x + argOffset;
-        const argY = argumentInputNodePosition.y + LAYER_SPACING;
-      
+      parsedArguments.forEach((arg) => {
         const conclusionNodeId = getNodeId();
         const conclusionNode = {
           id: conclusionNodeId,
           type: 'conclusion',
-          position: { x: argX, y: argY },
+          position: { x: 0, y: 0 }, // Position will be updated by dagre
           data: { label: arg.conclusion },
         };
 
-        const nestedArg = convertToNestedStructure(arg);
-        const totalPremiseWidth = calculateSubtreeWidth(nestedArg.children, NODE_MAX_WIDTH, NODE_SPACING);
-
-        const premiseNodes = nestedArg.children.map((premise, index) => {
-          const premiseOffset = positionNodesHorizontally(totalPremiseWidth, NODE_MAX_WIDTH, NODE_SPACING, index);
-          const premiseX = argX + premiseOffset - totalPremiseWidth / 2;
-          const premiseY = argY + NODE_MAX_HEIGHT + LAYER_SPACING;
+        const premiseNodes = arg.premises.map((premise, premiseIndex) => {
           return {
             id: getNodeId(),
             type: 'premise',
-            position: { x: premiseX, y: premiseY },
-            data: { label: premise.label }
+            position: { x: 0, y: 0 }, // Position will be updated by dagre
+            data: { label: premise },
           };
         });
 
-        const assumptionNodes = nestedArg.children.flatMap(premise => 
-          premise.children.map((assumption, index) => {
-            const assumptionOffset = positionNodesHorizontally(totalPremiseWidth, NODE_MAX_WIDTH, NODE_SPACING, index);
-            const assumptionX = argX + assumptionOffset - totalPremiseWidth / 2;
-            const assumptionY = premiseNodes[0].position.y + NODE_MAX_HEIGHT + LAYER_SPACING;
-            return {
-              id: getNodeId(),
-              type: 'assumption',
-              position: { x: assumptionX, y: assumptionY },
-              data: { label: assumption.label, premiseIndex: premise.premiseIndex }
-            };
-          })
-        );
+        const assumptionNodes = arg.explicitAssumptions.concat(arg.implicitAssumptions).map((assumption) => {
+          return {
+            id: getNodeId(),
+            type: 'assumption',
+            position: { x: 0, y: 0 }, // Position will be updated by dagre
+            data: { label: assumption.text, premiseIndex: assumption.premiseIndex },
+          };
+        });
 
         allNodes.push(conclusionNode, ...premiseNodes, ...assumptionNodes);
 
@@ -133,7 +86,7 @@ export const initiateArgument = createAsyncThunk(
         });
 
         // Connect assumptions to their respective premises
-        assumptionNodes.forEach(assumptionNode => {
+        assumptionNodes.forEach((assumptionNode) => {
           const premiseNodeId = premiseNodes[assumptionNode.data.premiseIndex]?.id;
           if (premiseNodeId) {
             allEdges.push({
@@ -147,14 +100,14 @@ export const initiateArgument = createAsyncThunk(
         });
       });
 
-      console.log("allNodes", allNodes);
-      console.log("allEdges", allEdges);
+      const argumentInputNode = state.nodes.find(node => node.id === nodeId);
+      const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(allNodes, allEdges, argumentInputNode);
 
       // Dispatching nodes and edges
       const dispatchNodesAndEdges = () => {
-        allNodes.forEach(node => dispatch(addNode(node)));
+        layoutedNodes.forEach(node => dispatch(addNode(node)));
         setTimeout(() => { // Adding a slight delay to ensure nodes are created before edges
-          allEdges.forEach(edge => dispatch(addEdge(edge)));
+          layoutedEdges.forEach(edge => dispatch(addEdge(edge)));
         }, 100);
       };
 

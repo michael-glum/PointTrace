@@ -30,14 +30,14 @@ export const parseArgumentResponse = (responseContent) => {
     currentSection = '';
   };
 
-  // Helper function to extract premise index
-  const extractPremiseIndex = (text) => {
-    const match = text.match(/\(Premise #(\d+)\)$/);
-    return match ? parseInt(match[1], 10) - 1 : -1;
-  };
-
   // Regular expression to match "Argument X:"
   const argumentHeaderRegex = /^Argument \d+:/;
+
+  // Regular expression to extract premise index
+  const premiseIndexRegex = /\(Premise #(\d+)\)$/; // TODO: Make this work when multiple premises are associated with one assumption
+
+  // Initialize the first argument
+  addNewArgument();
 
   // Iterate over the lines to extract information
   lines.forEach(line => {
@@ -60,12 +60,16 @@ export const parseArgumentResponse = (responseContent) => {
       currentArgument.argumentStatus = line.replace(SECTION_KEYS.ARGUMENT_STATUS, '').trim();
     } else if (line.startsWith('- ')) {
       const content = line.replace('- ', '').trim();
+      const match = content.match(premiseIndexRegex);
+      const text = match ? content.replace(premiseIndexRegex, '').trim() : content;
+      const premiseIndex = match ? parseInt(match[1], 10) - 1 : null; // Convert 1-based to 0-based index
+
       if (currentSection === 'premises') {
         currentArgument.premises.push(content);
       } else if (currentSection === 'explicitAssumptions') {
-        currentArgument.explicitAssumptions.push({ text: content, premiseIndex: extractPremiseIndex(content) });
+        currentArgument.explicitAssumptions.push({ text, premiseIndex });
       } else if (currentSection === 'implicitAssumptions') {
-        currentArgument.implicitAssumptions.push({ text: content, premiseIndex: extractPremiseIndex(content) });
+        currentArgument.implicitAssumptions.push({ text, premiseIndex });
       }
     }
   });

@@ -1,3 +1,4 @@
+// slices/nodeSlice.js
 import { createSlice } from '@reduxjs/toolkit';
 
 const nodeSlice = createSlice({
@@ -10,7 +11,7 @@ const nodeSlice = createSlice({
     updateNode: (state, action) => {
       const index = state.findIndex(node => node.id === action.payload.id);
       if (index >= 0) {
-        state[index] = { ...state[index], ...action.payload };
+        state[index] = { ...state[index], position: action.payload.position };
       }
     },
     setNodes: (state, action) => {
