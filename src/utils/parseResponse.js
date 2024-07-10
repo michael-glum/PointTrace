@@ -30,6 +30,12 @@ export const parseArgumentResponse = (responseContent) => {
     currentSection = '';
   };
 
+  // Helper function to extract premise index
+  const extractPremiseIndex = (text) => {
+    const match = text.match(/\(Premise #(\d+)\)$/);
+    return match ? parseInt(match[1], 10) - 1 : -1;
+  };
+
   // Regular expression to match "Argument X:"
   const argumentHeaderRegex = /^Argument \d+:/;
 
@@ -57,9 +63,9 @@ export const parseArgumentResponse = (responseContent) => {
       if (currentSection === 'premises') {
         currentArgument.premises.push(content);
       } else if (currentSection === 'explicitAssumptions') {
-        currentArgument.explicitAssumptions.push({ text: content, premiseIndex: currentArgument.premises.length - 1 });
+        currentArgument.explicitAssumptions.push({ text: content, premiseIndex: extractPremiseIndex(content) });
       } else if (currentSection === 'implicitAssumptions') {
-        currentArgument.implicitAssumptions.push({ text: content, premiseIndex: currentArgument.premises.length - 1 });
+        currentArgument.implicitAssumptions.push({ text: content, premiseIndex: extractPremiseIndex(content) });
       }
     }
   });

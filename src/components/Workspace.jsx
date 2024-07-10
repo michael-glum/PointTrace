@@ -18,6 +18,7 @@ import { Box } from '@mui/material';
 import { NodeTypes } from '../utils/constants';
 import { setNodes as setNodesAction, updateNode as updateNodeAction } from '../slices/nodeSlice';
 import { setEdges as setEdgesAction, addEdge as addEdgeAction } from '../slices/edgeSlice';
+import getLayoutedElements from '../utils/layoutHelper';
 
 const Workspace = () => {
   const dispatch = useDispatch();
@@ -110,6 +111,13 @@ const Workspace = () => {
       dispatch(setEdgesAction(flow.edges));
     }
   }, [reactFlowInstance, dispatch]);
+
+  // Apply the layout whenever nodes or edges change
+  useEffect(() => {
+    const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(nodes, edges);
+    setNodes([...layoutedNodes]);
+    setEdges([...layoutedEdges]);
+  }, [nodes, edges]);
 
   return (
     <ReactFlowProvider>
