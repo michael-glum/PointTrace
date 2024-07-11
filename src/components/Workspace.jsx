@@ -30,6 +30,8 @@ const Workspace = () => {
   const [reactFlowInstance, setReactFlowInstance] = useState(null);
   const { drop } = useNodeDrop(reactFlowInstance);
 
+  const initialNodePositions = useRef({});
+
   // Sync Redux state to local state only once to avoid infinite loop
   useEffect(() => {
     setNodes(reduxNodes);
@@ -39,14 +41,14 @@ const Workspace = () => {
     setEdges(reduxEdges);
   }, [reduxEdges, setEdges]);
 
-  // Debounced function to update Redux
+  // Debounced functions to update Redux
   const debouncedUpdateNodes = useCallback(
     debounce((updatedNodes) => {
       dispatch(setNodesAction(updatedNodes));
     }, 500),
     [dispatch]
   );
-
+  
   const debouncedUpdateEdges = useCallback(
     debounce((updatedEdges) => {
       dispatch(setEdgesAction(updatedEdges));
@@ -54,7 +56,42 @@ const Workspace = () => {
     [dispatch]
   );
 
-  // Use ReactFlow's built-in handlers for performance
+  const getChildNodes = useCallback((nodeId) => {
+    return edges
+      .filter(edge => edge.source === nodeId)
+      .map(edge => nodes.find(node => node.id === edge.target));
+  }, [edges, nodes]);
+
+  const updateNodeAndDescendants = useCallback((nodeId, dx, dy, visited = new Set()) => {
+    if (visited.has(nodeId)) return;
+    visited.add(nodeId);
+
+    const childNodes = getChildNodes(nodeId);
+
+    setNodes((prevNodes) => {
+      const updatedNodes = prevNodes.map((node) => {
+        if (node.id === nodeId || childNodes.some((child) => child.id === node.id)) {
+          return {
+            ...node,
+            position: {
+              x: node.position.x + dx,
+              y: node.position.y + dy,
+            },
+          };
+        }
+        return node;
+      });
+
+      childNodes.forEach((childNode) => {
+        if (childNode) {
+          updateNodeAndDescendants(childNode.id, dx, dy, visited);
+        }
+      });
+
+      return updatedNodes;
+    });
+  }, [getChildNodes, setNodes]);
+
   const onNodesChangeHandler = useCallback(
     (changes) => {
       setNodes((nds) => {
@@ -67,7 +104,7 @@ const Workspace = () => {
         return updatedNodes;
       });
     },
-    [onNodesChange, debouncedUpdateNodes]
+    [debouncedUpdateNodes, onNodesChange]
   );
 
   const onEdgesChangeHandler = useCallback(
@@ -82,7 +119,7 @@ const Workspace = () => {
         return updatedEdges;
       });
     },
-    [onEdgesChange, debouncedUpdateEdges]
+    [debouncedUpdateEdges, onEdgesChange]
   );
 
   const onConnect = useCallback(
@@ -96,49 +133,55 @@ const Workspace = () => {
     [setEdges, dispatch]
   );
 
-  const getChildNodes = useCallback((nodeId) => {
-    return edges
-      .filter(edge => edge.source === nodeId)
-      .map(edge => nodes.find(node => node.id === edge.target));
-  }, [edges, nodes]);
-
-  const updateNodeAndChildren = useCallback((nodeId, dx, dy, visited = new Set()) => {
-    if (visited.has(nodeId)) return;
-    visited.add(nodeId);
-
-    setNodes((prevNodes) => 
-      prevNodes.map((node) => {
-        if (node.id === nodeId) {
-          const newNode = {
-            ...node,
-            position: {
-              x: node.position.x + dx,
-              y: node.position.y + dy,
-            },
-          };
-          return newNode;
-        }
-        return node;
-      })
-    );
-
-    const childNodes = getChildNodes(nodeId);
-    childNodes.forEach((childNode) => {
-      if (childNode) {
-        updateNodeAndChildren(childNode.id, dx, dy, visited);
+  const onNodeDragStart = useCallback((_, node) => {
+    const storeInitialPositions = (nodeId) => {
+      const initialNode = nodes.find((n) => n.id === nodeId);
+      if (initialNode) {
+        initialNodePositions.current[nodeId] = { x: initialNode.position.x, y: initialNode.position.y };
+        getChildNodes(nodeId).forEach((childNode) => {
+          if (childNode) storeInitialPositions(childNode.id);
+        });
       }
-    });
-  }, [getChildNodes]);
+    };
 
-  const onNodeDragStop = useCallback(
-    (event, node) => {
-      const dx = node.position.x - node.positionAbsolute.x;
-      const dy = node.position.y - node.positionAbsolute.y;
-      updateNodeAndChildren(node.id, dx, dy);
-      debouncedUpdateNodes(nodes); // Debounce the update to Redux here
-    },
-    [updateNodeAndChildren, debouncedUpdateNodes, nodes]
-  );
+    storeInitialPositions(node.id);
+  }, [nodes, getChildNodes]);
+
+  const onNodeDrag = useCallback((event, node) => {
+    const initialPosition = initialNodePositions.current[node.id];
+    const dx = node.position.x - initialPosition.x;
+    const dy = node.position.y - initialPosition.y;
+
+    const updateAllPositions = (nodeId, dx, dy) => {
+      setNodes((nds) => {
+        const updatedNodes = nds.map((n) => {
+          const initialPos = initialNodePositions.current[n.id];
+          if (initialPos) {
+            return {
+              ...n,
+              position: {
+                x: initialPos.x + dx,
+                y: initialPos.y + dy,
+              },
+            };
+          }
+          return n;
+        });
+        return updatedNodes;
+      });
+
+      getChildNodes(nodeId).forEach((childNode) => {
+        if (childNode) updateAllPositions(childNode.id, dx, dy);
+      });
+    };
+
+    updateAllPositions(node.id, dx, dy);
+  }, [getChildNodes, setNodes]);
+
+  const onNodeDragStop = useCallback((event, node) => {
+    initialNodePositions.current = {};
+    debouncedUpdateNodes(nodes);
+  }, [debouncedUpdateNodes, nodes]);
 
   const onSave = useCallback(() => {
     if (reactFlowInstance) {
@@ -167,6 +210,8 @@ const Workspace = () => {
             onNodesChange={onNodesChangeHandler}
             onEdgesChange={onEdgesChangeHandler}
             onConnect={onConnect}
+            onNodeDragStart={onNodeDragStart}
+            onNodeDrag={onNodeDrag}
             onNodeDragStop={onNodeDragStop}
             nodeTypes={NodeTypes}
             onInit={setReactFlowInstance}

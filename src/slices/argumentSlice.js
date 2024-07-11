@@ -3,9 +3,9 @@ import { fetchGPTResponse } from '../services/openai';
 import { makeInputPrompt } from '../utils/promptUtils';
 import { addNode } from './nodeSlice';
 import { addEdge } from './edgeSlice';
-import { getNodeId, getEdgeId, calculateSubtreeWidth, calculateTotalTreeWidth, positionNodesHorizontally } from '../utils/helpers';
+import { getNodeId, getEdgeId, calculateSubtreeWidth, positionNodesInSubtree } from '../utils/helpers';
 import { parseArgumentResponse } from '../utils/parseResponse';
-import { NODE_MAX_WIDTH, NODE_MAX_HEIGHT, NODE_SPACING, LAYER_SPACING } from '../utils/constants';
+import { LAYER_SPACING } from '../utils/constants';
 
 export const initiateArgument = createAsyncThunk(
   'argument/initiateArgument',
@@ -23,142 +23,87 @@ export const initiateArgument = createAsyncThunk(
     dispatch(setError(''));
 
     try {
-      const newMessage = { role: 'user', content: makeInputPrompt(input) };
-      const updatedHistory = [...conversationHistory, newMessage];
+      const updatedHistory = [...conversationHistory, { role: 'user', content: makeInputPrompt(input) }];
       const gptResponse = await fetchGPTResponse(updatedHistory);
       const responseContent = gptResponse.choices[0]?.message?.content || 'No response received.';
+      const updatedHistoryWithResponse = [...updatedHistory, { role: 'system', content: responseContent }];
       console.log("responseContent", responseContent);
 
       const parsedArguments = parseArgumentResponse(responseContent);
       console.log("parsedArguments", parsedArguments);
-      
-      const updatedHistoryWithResponse = [...updatedHistory, { role: 'system', content: responseContent }];
 
-      const allNodes = [];
-      const allEdges = [];
-
-      // Convert arguments to a nested structure
-      const convertToNestedStructure = (arg) => {
-        const premises = arg.premises.map((premise, premiseIndex) => ({
-          label: premise,
+      // Create tree structure
+      const argumentTree = parsedArguments.map(arg => ({
+        type: 'conclusion',
+        data: { label: arg.conclusion },
+        children: arg.premises.map((premise, premiseIndex) => ({
           type: 'premise',
-          premiseIndex,
+          data: { label: premise },
           children: arg.explicitAssumptions.concat(arg.implicitAssumptions)
             .filter(assumption => assumption.premiseIndex === premiseIndex)
             .map(assumption => ({
-              label: assumption.text,
               type: 'assumption',
-              children: [] // Add future layers here
+              data: { label: assumption.text },
+              children: []
             }))
-        }));
+        }))
+      }));
 
-        return {
-          label: arg.conclusion,
-          type: 'conclusion',
-          children: premises
-        };
-      };
+      console.log("argumentTree", argumentTree);
 
-      // Calculate the width of each argument subtree
-      const subtreeWidths = parsedArguments.map(arg => {
-        const nestedArg = convertToNestedStructure(arg);
-        return calculateSubtreeWidth([nestedArg], NODE_MAX_WIDTH, NODE_SPACING);
-      });
+      // Calculate the total width of the tree
+      const totalWidth = calculateSubtreeWidth(argumentTree);
+      console.log("totalWidth", totalWidth);
 
-      // Calculate the total width of the entire tree
-      const totalTreeWidth = calculateTotalTreeWidth(subtreeWidths, NODE_SPACING);
+      // Position all nodes
+      const startX = argumentInputNodePosition.x - totalWidth / 2;
+      const startY = argumentInputNodePosition.y + LAYER_SPACING;
+      positionNodesInSubtree(argumentTree, startX, startY);
 
-      // Calculate the horizontal position for each argument subtree
-      parsedArguments.forEach((arg, argIndex) => {
-        const argOffset = positionNodesHorizontally(totalTreeWidth, NODE_MAX_WIDTH, NODE_SPACING, argIndex);
-        const argX = argumentInputNodePosition.x + argOffset;
-        const argY = argumentInputNodePosition.y + LAYER_SPACING;
-      
-        const conclusionNodeId = getNodeId();
-        const conclusionNode = {
-          id: conclusionNodeId,
-          type: 'conclusion',
-          position: { x: argX, y: argY },
-          data: { label: arg.conclusion },
-        };
+      console.log("positioned argumentTree", argumentTree);
 
-        const nestedArg = convertToNestedStructure(arg);
-        const totalPremiseWidth = calculateSubtreeWidth(nestedArg.children, NODE_MAX_WIDTH, NODE_SPACING);
+      // Flatten the tree structure and create nodes and edges
+      const allNodes = [];
+      const allEdges = [];
 
-        const premiseNodes = nestedArg.children.map((premise, index) => {
-          const premiseOffset = positionNodesHorizontally(totalPremiseWidth, NODE_MAX_WIDTH, NODE_SPACING, index);
-          const premiseX = argX + premiseOffset - totalPremiseWidth / 2;
-          const premiseY = argY + NODE_MAX_HEIGHT + LAYER_SPACING;
-          return {
-            id: getNodeId(),
-            type: 'premise',
-            position: { x: premiseX, y: premiseY },
-            data: { label: premise.label }
-          };
+      const flattenTree = (node, parentId) => {
+        const id = getNodeId();
+        allNodes.push({
+          id,
+          type: node.type,
+          position: node.position,
+          data: node.data
         });
 
-        const assumptionNodes = nestedArg.children.flatMap(premise => 
-          premise.children.map((assumption, index) => {
-            const assumptionOffset = positionNodesHorizontally(totalPremiseWidth, NODE_MAX_WIDTH, NODE_SPACING, index);
-            const assumptionX = argX + assumptionOffset - totalPremiseWidth / 2;
-            const assumptionY = premiseNodes[0].position.y + NODE_MAX_HEIGHT + LAYER_SPACING;
-            return {
-              id: getNodeId(),
-              type: 'assumption',
-              position: { x: assumptionX, y: assumptionY },
-              data: { label: assumption.label, premiseIndex: premise.premiseIndex }
-            };
-          })
-        );
-
-        allNodes.push(conclusionNode, ...premiseNodes, ...assumptionNodes);
-
-        // Connect conclusion to argument input node
-        allEdges.push({
-          id: getEdgeId(),
-          source: nodeId,
-          target: conclusionNodeId,
-          targetHandle: 'target-handle-top',
-        });
-
-        // Connect premises to conclusion
-        premiseNodes.forEach(premiseNode => {
-          allEdges.push({
+        if (parentId) {
+          const edge = {
             id: getEdgeId(),
-            source: premiseNode.id,
-            target: conclusionNodeId,
-            sourceHandle: 'source-handle-top',
-            targetHandle: 'target-handle-bottom',
-          });
-        });
+            source: parentId,
+            target: id,
+            sourceHandle: 'source-handle-bottom'
+          };
 
-        // Connect assumptions to their respective premises
-        assumptionNodes.forEach(assumptionNode => {
-          const premiseNodeId = premiseNodes[assumptionNode.data.premiseIndex]?.id;
-          if (premiseNodeId) {
-            allEdges.push({
-              id: getEdgeId(),
-              source: premiseNodeId,
-              target: assumptionNode.id,
-              sourceHandle: 'source-handle-bottom',
-              targetHandle: 'target-handle-top',
-            });
+          if (parentId !== nodeId) { // If the parent is not the ArgumentInputNode
+            edge.targetHandle = 'target-handle-top';
           }
-        });
-      });
 
-      console.log("allNodes", allNodes);
-      console.log("allEdges", allEdges);
+          allEdges.push(edge);
+        }
 
-      // Dispatching nodes and edges
-      const dispatchNodesAndEdges = () => {
-        allNodes.forEach(node => dispatch(addNode(node)));
-        setTimeout(() => { // Adding a slight delay to ensure nodes are created before edges
-          allEdges.forEach(edge => dispatch(addEdge(edge)));
-        }, 100);
+        node.children.forEach(child => flattenTree(child, id));
       };
 
-      dispatchNodesAndEdges();
+      // Flatten the tree and start from the argument input node
+      argumentTree.forEach(node => flattenTree(node, nodeId));
+
+      // Dispatch nodes first
+      allNodes.forEach(node => dispatch(addNode(node)));
+
+      // Delay to ensure nodes are rendered before dispatching edges
+      setTimeout(() => {
+        allEdges.forEach(edge => dispatch(addEdge(edge)));
+      }, 100);
+
       dispatch(setResponse({ nodeId, response: responseContent }));
       dispatch(setConversationHistory({ nodeId, conversationHistory: updatedHistoryWithResponse }));
 

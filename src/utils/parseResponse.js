@@ -60,18 +60,19 @@ export const parseArgumentResponse = (responseContent) => {
       currentArgument.argumentStatus = line.replace(SECTION_KEYS.ARGUMENT_STATUS, '').trim();
     } else if (line.startsWith('- ')) {
       const content = line.replace('- ', '').trim();
+      const premiseIndex = extractPremiseIndex(content);
       if (currentSection === 'premises') {
         currentArgument.premises.push(content);
       } else if (currentSection === 'explicitAssumptions') {
-        currentArgument.explicitAssumptions.push({ text: content, premiseIndex: currentArgument.premises.length - 1 });
-        currentArgument.explicitAssumptions.push({ text: content, premiseIndex: extractPremiseIndex(content) });
+        currentArgument.explicitAssumptions.push({ text: content, premiseIndex });
       } else if (currentSection === 'implicitAssumptions') {
-        currentArgument.implicitAssumptions.push({ text: content, premiseIndex: currentArgument.premises.length - 1 });
-        currentArgument.implicitAssumptions.push({ text: content, premiseIndex: extractPremiseIndex(content) });
+        currentArgument.implicitAssumptions.push({ text: content, premiseIndex });
       }
     }
   });
+  
   // Add the last argument if it has a conclusion
   addNewArgument();
+
   return parsedArguments;
 };
